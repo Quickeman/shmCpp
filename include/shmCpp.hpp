@@ -13,6 +13,19 @@
 /** Namespace encapsulating the shmCpp library. */
 namespace shm {
 
+// Errors
+
+/** Errors concerning file access, permissions, etc. */
+class FileError : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+/** Errors concerning memory mapping. */
+class MemoryError : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+
 /** Class for creating and manipulating a POSIX shared memory object (SMO). */
 template<class T>
 class SharedMemory {
@@ -31,27 +44,27 @@ class SharedMemory {
     ~SharedMemory();
 
     /** @returns the name used to open the shared memory. */
-    const std::string& name() const {
+    const std::string& name() const noexcept {
         return this->_name;
     }
 
     /** @returns the number of @ref T objects currently stored in the shared
      * memory; the size of the shared memory object. */
-    size_t size() const {
+    size_t size() const noexcept {
         return this->_size;
     }
 
     /** Direct access to the mapped memory. */
-    T* data() {
+    T* data() noexcept {
         return this->_data;
     }
 
     /** Checks if the memory is mapped. */
-    bool empty() const;
+    bool empty() const noexcept;
 
     /** Element access. */
-    T& operator[](size_t n);
-    const T& operator[](size_t n) const;
+    T& operator[](size_t n) noexcept;
+    const T& operator[](size_t n) const noexcept;
 
     /** Bounds-checked element access. */
     T& at(size_t n);
@@ -126,16 +139,16 @@ SharedMemory<T>::~SharedMemory() {
 }
 
 template<class T>
-bool SharedMemory<T>::empty() const {
+bool SharedMemory<T>::empty() const noexcept {
     return this->_data != nullptr;
 }
 
 template<class T>
-T& SharedMemory<T>::operator[](size_t n) {
+T& SharedMemory<T>::operator[](size_t n) noexcept {
     return this->_data[n];
 }
 template<class T>
-const T& SharedMemory<T>::operator[](size_t n) const {
+const T& SharedMemory<T>::operator[](size_t n) const noexcept {
     return this->_data[n];
 }
 
