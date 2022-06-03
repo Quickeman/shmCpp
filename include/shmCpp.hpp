@@ -9,6 +9,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <iostream>
 
 /** Namespace encapsulating the shmCpp library. */
 namespace shm {
@@ -180,12 +181,60 @@ void SharedMemory<T>::open() {
 
     if (this->fd == -1) {
         // error handling
+        std::string msg {"Shared memory: could not open " + this->_name};
+
+        switch (errno) {
+            case EACCES:
+                msg.append(": permission denied");
+            break;
+            case EINVAL:
+                msg.append(": invalid name");
+            break;
+            case EMFILE:
+            case ENFILE:
+                msg.append(": too many files open");
+            break;
+            case ENAMETOOLONG:
+                msg.append(": filename too long");
+            break;
+            default:
+                msg.append(": error code " + std::to_string(errno));
+            break;
+        }
+
+        throw FileError(msg);
     }
 
     const auto err {ftruncate(this->fd, this->_size * sizeof(T))};
 
     if (err == -1) {
         // error handling
+        std::string msg {
+            "Shared memory: could not set shared memory object " + this->_name +
+            " size to " + std::to_string(this->_size) + " (" + this->_size * sizeof(T)
+            + " bytes)"
+        };
+
+        switch (errno) {
+            case EFBIG:
+                msg.append(": larger than maximum file size");
+            break;
+            case EPERM:
+                msg.append(": permission denied");
+            break;
+            case EINTR:
+                msg.append(": interrupted by signal");
+            break;
+            case EBADF:
+            case EINVAL:
+                msg.append(": internal error");
+            break;
+            default:
+                msg.append(": error code " + std::to_string(errno));
+            break;
+        }
+
+        throw FileError(msg);
     }
 }
 
@@ -197,6 +246,22 @@ void SharedMemory<T>::close() {
 
         if (err == -1) {
             // error handling
+            std::string msg {
+                "Shared memory: error when closing file " + this->_name +
+                " with descriptor " + this->fd
+            };
+
+            switch (errno) {
+                case EBADF:
+                    msg.append(": internal error");
+                break;
+                case EINTR:
+                    msg.append(": interrupted by signal");
+                break;
+            }
+
+            msg.push_back('\n');
+            std::cerr << msg;
         }
     }
 
