@@ -49,8 +49,13 @@ class SharedMemory {
     /** Checks if the memory is mapped. */
     bool empty() const;
 
+    /** Element access. */
     T& operator[](size_t n);
     const T& operator[](size_t n) const;
+
+    /** Bounds-checked element access. */
+    T& at(size_t n);
+    const T& at(size_t n) const;
 
 private:
     /** Opens a SMO.
@@ -131,6 +136,25 @@ T& SharedMemory<T>::operator[](size_t n) {
 }
 template<class T>
 const T& SharedMemory<T>::operator[](size_t n) const {
+    return this->_data[n];
+}
+
+template<class T>
+T& SharedMemory<T>::at(size_t n) {
+    if (n >= this->_size)
+        throw std::out_of_range(
+            "Shared memory: tried to access element " + std::to_string(n) +
+            " (size = " + std::to_string(this->_size) + ')'
+        );
+    return this->_data[n];
+}
+template<class T>
+const T& SharedMemory<T>::at(size_t n) const {
+    if (n >= this->_size)
+        throw std::out_of_range(
+            "Shared memory: tried to access element " + std::to_string(n) +
+            " (size = " + std::to_string(this->_size) + ')'
+        );
     return this->_data[n];
 }
 
