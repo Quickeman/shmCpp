@@ -258,6 +258,9 @@ void SharedMemory<T>::close() {
                 case EINTR:
                     msg.append(": interrupted by signal");
                 break;
+                default:
+                    msg.append(" error code " + std::to_string(errno));
+                break;
             }
 
             msg.push_back('\n');
@@ -288,6 +291,9 @@ void SharedMemory<T>::unlink() {
             break;
             case ENOENT:
                 msg.append(": does not exist");
+            break;
+            default:
+                msg.append(" error code " + std::to_string(errno));
             break;
         }
 
@@ -332,6 +338,9 @@ void SharedMemory<T>::map() {
             case EPERM:
                 msg.append(": file sealed or execution denied");
             break;
+            default:
+                msg.append(" error code " + std::to_string(errno));
+            break;
         }
 
         throw MemoryError(msg);
@@ -351,6 +360,9 @@ void SharedMemory<T>::unmap() {
             switch (errno) {
                 case EINVAL:
                     msg.append(": internal error");
+                break;
+                default:
+                    msg.append(" error code " + std::to_string(errno));
                 break;
             }
 
