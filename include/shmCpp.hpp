@@ -273,7 +273,25 @@ void SharedMemory<T>::unlink() {
     const auto err {shm_unlink(this->_name.c_str())};
 
     if (err == -1) {
-        // error handling
+        std::string msg {
+            "Shared memory: error when unlinking shared memory " + this->_name
+        };
+
+        switch (errno) {
+            case EACCES:
+                msg.append(": permission denied");
+            break;
+            case EMFILE:
+            case ENFILE:
+            case ENAMETOOLONG:
+                msg.append(": file error");
+            break;
+            case ENOENT:
+                msg.append(": does not exist");
+            break;
+        }
+
+        std::cerr << msg;
     }
 }
 
@@ -285,7 +303,38 @@ void SharedMemory<T>::map() {
     this->_data = mmap(NULL, this->_size * sizeof(T), prot, flags, this->fd, 0);
 
     if (this->_data == MAP_FAILED) {
-        // error handling
+        std::string msg {
+            "Shared memory: error mapping memory object " + this->_name +
+            " of size " + std::to_string(this->_size) + " (" +
+            std::to_string(this->_size * sizeof(T)) + " bytes)"
+        };
+
+        switch (errno) {
+            case EACCES:
+            case EBADF:
+                msg.append(": permissions/file error");
+            break;
+            case EAGAIN:
+                msg.append(": locking error");
+            break;
+            case EINVAL:
+                if (this->_size * sizeof(T))
+                    msg.append(": too large");
+                else
+                    msg.append(": cannot map zero bytes");
+            break;
+            case ENODEV:
+                msg.append(": filesystem does not support mamory mapping");
+            break;
+            case ENOMEM:
+                msg.append(": no memory available or too many mappings");
+            break;
+            case EPERM:
+                msg.append(": file sealed or execution denied");
+            break;
+        }
+
+        throw MemoryError(msg);
     }
 }
 
@@ -295,7 +344,18 @@ void SharedMemory<T>::unmap() {
         const auto err {munmap(this->_data, this->_size)};
 
         if (err == -1) {
-            // error handling
+            std::string msg {
+                "Shared memory: error unmapping object " + this->_name
+            };
+
+            switch (errno) {
+                case EINVAL:
+                    msg.append(": internal error");
+                break;
+            }
+
+            msg.push_back('\n');
+            std::cerr << msg;
         }
     }
 }
