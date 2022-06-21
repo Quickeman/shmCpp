@@ -30,6 +30,7 @@ class MemoryError : public std::runtime_error {
 /** Class for creating and manipulating a POSIX shared memory object (SMO). */
 template<class T>
 class SharedMemory {
+public:
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist, and resizes it
      * to @a size.
@@ -175,7 +176,7 @@ const T& SharedMemory<T>::at(size_t n) const {
 template<class T>
 void SharedMemory<T>::open() {
     const auto oflag {O_RDWR | O_CREAT};
-    const mode_t mode {S_IRWXU | S_IRWXG | S_IRWXO};
+    const mode_t mode {S_IRWXU | S_IRGRP};
 
     this->fd = shm_open(this->_name.c_str(), oflag, mode);
 
@@ -211,7 +212,7 @@ void SharedMemory<T>::open() {
         // error handling
         std::string msg {
             "Shared memory: could not set shared memory object " + this->_name +
-            " size to " + std::to_string(this->_size) + " (" + this->_size * sizeof(T)
+            " size to " + std::to_string(this->_size) + " (" + std::to_string(this->_size * sizeof(T))
             + " bytes)"
         };
 
@@ -248,7 +249,7 @@ void SharedMemory<T>::close() {
             // error handling
             std::string msg {
                 "Shared memory: error when closing file " + this->_name +
-                " with descriptor " + this->fd
+                " with descriptor " + std::to_string(this->fd)
             };
 
             switch (errno) {
@@ -306,7 +307,7 @@ void SharedMemory<T>::map() {
     const auto prot {PROT_READ | PROT_WRITE | PROT_EXEC};
     const auto flags {MAP_SHARED};
 
-    this->_data = mmap(NULL, this->_size * sizeof(T), prot, flags, this->fd, 0);
+    this->_data = static_cast<T*>(mmap(NULL, this->_size * sizeof(T), prot, flags, this->fd, 0));
 
     if (this->_data == MAP_FAILED) {
         std::string msg {
