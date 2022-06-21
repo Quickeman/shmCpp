@@ -126,7 +126,7 @@ template<class T>
 SharedMemory<T>::SharedMemory(const std::string& nm, size_t sz):
 _name{nm}, fd{-1}, _data{nullptr}, _size{sz} {
     if (this->_size < 1)
-        throw std::invalid_argument("Cannot create shared memory object with size < 1");
+        throw std::invalid_argument("Cannot create shared memory object with size < 1: " + std::to_string(this->_size));
 
     this->open();
     this->map();
@@ -158,7 +158,7 @@ T& SharedMemory<T>::at(size_t n) {
     if (n >= this->_size)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
-            " (size = " + std::to_string(this->_size) + ')'
+            ", size = " + std::to_string(this->_size)
         );
     return this->_data[n];
 }
@@ -167,7 +167,7 @@ const T& SharedMemory<T>::at(size_t n) const {
     if (n >= this->_size)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
-            " (size = " + std::to_string(this->_size) + ')'
+            ", size = " + std::to_string(this->_size)
         );
     return this->_data[n];
 }
