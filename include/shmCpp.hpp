@@ -399,6 +399,8 @@ bool exists(const std::string& name) {
     }
     else {
         b = true;
+
+        close(fd);
     }
 
     return b;
