@@ -299,6 +299,7 @@ void SharedMemory<T>::unlink() {
             break;
         }
 
+        msg.push_back('\n');
         std::cerr << msg;
     }
 }
