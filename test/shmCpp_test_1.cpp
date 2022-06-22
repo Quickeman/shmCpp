@@ -14,7 +14,7 @@ int main() {
     }
     else if (pid == 0) {
         // Child (other)
-        char* args[] = {"shmCpp_test_2", NULL};
+        char* args[] = {const_cast<char*>("shmCpp_test_2"), NULL};
         const auto err {execv("./shmCpp_test_2", args)};
         std::cerr << "Failed to launch receiver\n";
         exit(1);
