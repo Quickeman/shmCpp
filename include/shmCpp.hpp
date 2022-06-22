@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include <string>
 #include <stdexcept>
@@ -377,7 +378,7 @@ void SharedMemory<T>::unmap() {
 bool exists(const std::string& name) {
     bool b {false};
 
-    auto fd {shm_open(name.c_str(), O_RDONLY)};
+    auto fd {shm_open(name.c_str(), O_RDONLY, S_IRUSR)};
 
     if (fd == -1) {
         switch (errno) {
