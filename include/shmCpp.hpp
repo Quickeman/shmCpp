@@ -108,11 +108,11 @@ private:
 /** Tests whether a SMO called @a name exists.
  * @note This test will also fail if the memory fails to open for reasons such
  * as process- or system-wide limits on file openings being reached. */
-bool exists(const std::string& name);
+static bool exists(const std::string& name);
 
 /** Formats the identifier name according to the naming conventions outlined at
  * https://www.man7.org/linux/man-pages/man3/shm_open.3.html#DESCRIPTION. */
-std::string formatName(const std::string& name);
+static std::string formatName(const std::string& name);
 
 } // namespace shm
 
