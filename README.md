@@ -3,8 +3,14 @@ A C++ interface for using POSIX shared memory
 
 This is a header-only C++ library for creating and manipulating POSIX shared memory objects.
 
-`shmCpp` should work with any C++ standard from C++03 onward.
-However, the tests require C++11 or later.
+Requires C++11 or later.
+
+
+## Usage
+
+The API consists of two main classes: `shm::Object` and `shm::Array`.
+These, as the names suggest, can be used such that they can store single objects,
+or an array of objects of the same type.
 
 
 ## Including shmCpp in your Project
