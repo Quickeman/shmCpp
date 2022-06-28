@@ -292,7 +292,8 @@ void SharedMemory<T>::unlink() {
                 msg.append(": file error");
             break;
             case ENOENT:
-                msg.append(": does not exist");
+                // Probably already unlinked by another destructor
+                return;
             break;
             default:
                 msg.append(" error code " + std::to_string(errno));
