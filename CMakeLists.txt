@@ -32,7 +32,7 @@ foreach(testSrc ${TEST_SRCS})
     # Get extension-less file name
     get_filename_component(testFileName ${testSrc} NAME_WE)
     # Make test name
-    set(testName ${testFileName})
+    set(testName ${PROJECT_NAME}_test_${testFileName})
     # Add target
     add_executable(${testName} ${testSrc})
     # Link to realtime library on Linux
