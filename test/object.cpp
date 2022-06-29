@@ -23,8 +23,7 @@ int main() {
 
         std::cout << "Sender launched\n";
 
-        mem->x = shmTest::obj_value.x;
-        mem.get().y = shmTest::obj_value.y;
+        mem = shmTest::obj_value;
         setObjZ(mem);
 
         std::cout << "Data sent\n";
