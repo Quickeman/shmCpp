@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 int main() {
-    shm::Array<shmTest::type> mem(shmTest::name, shmTest::size);
+    shm::Array<shmTest::type, shmTest::size> mem(shmTest::name);
 
     const auto pid {fork()};
     if (pid > 0) {

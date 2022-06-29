@@ -28,9 +28,15 @@ class MemoryError : public std::runtime_error {
 };
 
 
-/** Shared memory base class. */
+/** Shared memory base class.
+ * @param Sz The number of bytes to store in the shared memory. Must be
+ * greater than zero. */
+template<size_t Sz>
 class _SharedMemory {
 public:
+    // Assert size is acceptable is ok
+    static_assert(Sz > 0, "Cannot create shared memory object for type with size 0");
+
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist, and resizes it
      * to @a size.
@@ -41,7 +47,7 @@ public:
      * @note If the SMO already exists and its size is larger than that
      * specified, the data past the end of the new length in the existing SMO
      * will be lost or corrupted. */
-    _SharedMemory(const std::string& name, size_t size);
+    _SharedMemory(const std::string& name);
 
     virtual ~_SharedMemory();
 
@@ -75,9 +81,6 @@ protected:
     void* _data;
 
 private:
-    /** Size of the data; the number of bytes in the shared memory. */
-    const size_t _size;
-
     /** Shared memory object's name. */
     const std::string _name;
 
@@ -87,12 +90,9 @@ private:
 
 
 /** Class for creating and manipulating a POSIX shared memory object (SMO). */
-template<class T>
-class Object : public _SharedMemory {
+template<class Tp>
+class Object : public _SharedMemory<sizeof(Tp)> {
 public:
-    // Assert T is ok
-    static_assert(sizeof(T) > 0, "Cannot create shared memory object for type with size 0");
-
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist.
      * @param name The name/identifier of the POSIX shared memory object.
@@ -104,56 +104,47 @@ public:
     ~Object() = default;
 
     /** Object access. */
-    operator T&() noexcept;
-    operator T&() const noexcept;
-    T* operator->() noexcept;
-    const T* operator->() const noexcept;
-    T& get() noexcept;
-    const T& get() const noexcept;
+    operator Tp&() noexcept;
+    operator Tp&() const noexcept;
+    Tp* operator->() noexcept;
+    const Tp* operator->() const noexcept;
+    Tp& get() noexcept;
+    const Tp& get() const noexcept;
 
     /** Direct access to the mapped memory. */
-    T* data() noexcept;
+    Tp* data() noexcept;
 };
 
 
 /** Class for creating and manipulating a POSIX shared memory object (SMO) array. */
-template<class T>
-class Array : public _SharedMemory {
+template<class Tp, size_t Sz>
+class Array : public _SharedMemory<sizeof(Tp) * Sz> {
 public:
-    // Assert T is ok
-    static_assert(sizeof(T) > 0, "Cannot create shared memory array for type with size 0");
-
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist, and resizes it
      * to @a size.
      * @param name The name/identifier of the POSIX shared memory object.
-     * @param size The number of T objects to store in the shared memory. Must
-     * be greater than zero.
      * @note It is advised to use @ref formatName on the name used.
      * @note If the SMO already exists and its size is larger than that
      * specified, the data past the end of the new length in the existing SMO
      * will be lost. */
-    Array(const std::string& name, size_t size);
+    Array(const std::string& name);
 
     ~Array() = default;
 
     /** Element access. */
-    T& operator[](size_t n) noexcept;
-    const T& operator[](size_t n) const noexcept;
+    Tp& operator[](size_t n) noexcept;
+    const Tp& operator[](size_t n) const noexcept;
 
     /** Bounds-checked element access. */
-    T& at(size_t n);
-    const T& at(size_t n) const;
+    Tp& at(size_t n);
+    const Tp& at(size_t n) const;
 
-    /** @returns the number of @ref T objects in the Array. */
-    size_t size() const noexcept;
+    /** @returns @ref Sz; the number of @ref Tp objects in the Array. */
+    constexpr size_t size() const noexcept { return Sz; }
 
     /** Direct access to the mapped memory. */
-    T* data() noexcept;
-
-private:
-    /** Number of elements stored. */
-    const size_t _num;
+    Tp* data() noexcept;
 };
 
 /** Tests whether a SMO called @a name exists.
@@ -175,31 +166,33 @@ namespace shm {
 
 // class _SharedMemory
 
-_SharedMemory::_SharedMemory(const std::string& nm, size_t sz):
-_data{nullptr}, _size{sz}, _name{nm}, fd{-1}
+template<size_t Sz>
+_SharedMemory<Sz>::_SharedMemory(const std::string& nm):
+_data{nullptr}, _name{nm}, fd{-1}
 {
-    if (!(this->_size > 0))
-        throw std::invalid_argument("Cannot create shared memory array with size < 1: " + std::to_string(this->_size));
-
     this->open();
     this->map();
     this->close();
 }
 
-_SharedMemory::~_SharedMemory() {
+template<size_t Sz>
+_SharedMemory<Sz>::~_SharedMemory() {
     this->unmap();
     this->unlink();
 }
 
-const std::string& _SharedMemory::name() const noexcept {
+template<size_t Sz>
+const std::string& _SharedMemory<Sz>::name() const noexcept {
     return this->_name;
 }
 
-bool _SharedMemory::empty() const noexcept {
+template<size_t Sz>
+bool _SharedMemory<Sz>::empty() const noexcept {
     return this->_data != nullptr;
 }
 
-void _SharedMemory::open() {
+template<size_t Sz>
+void _SharedMemory<Sz>::open() {
     const auto oflag {O_RDWR | O_CREAT};
     const mode_t mode {S_IRWXU | S_IRGRP};
 
@@ -231,13 +224,13 @@ void _SharedMemory::open() {
         throw FileError(msg);
     }
 
-    const auto err {ftruncate(this->fd, this->_size)};
+    const auto err {ftruncate(this->fd, Sz)};
 
     if (err == -1) {
         // error handling
         std::string msg {
             "Shared memory: could not create shared memory object " + this->_name +
-            " of size " + std::to_string(this->_size) + " bytes"
+            " of size " + std::to_string(Sz) + " bytes"
         };
 
         switch (errno) {
@@ -263,7 +256,8 @@ void _SharedMemory::open() {
     }
 }
 
-void _SharedMemory::close() {
+template<size_t Sz>
+void _SharedMemory<Sz>::close() {
     if (this->fd != -1) {
         // Only close the file if it is open
         const auto err {::close(this->fd)};
@@ -295,7 +289,8 @@ void _SharedMemory::close() {
     this->fd = -1;
 }
 
-void _SharedMemory::unlink() {
+template<size_t Sz>
+void _SharedMemory<Sz>::unlink() {
     const auto err {shm_unlink(this->_name.c_str())};
 
     if (err == -1) {
@@ -326,16 +321,17 @@ void _SharedMemory::unlink() {
     }
 }
 
-void _SharedMemory::map() {
+template<size_t Sz>
+void _SharedMemory<Sz>::map() {
     const auto prot {PROT_READ | PROT_WRITE | PROT_EXEC};
     const auto flags {MAP_SHARED};
 
-    this->_data = mmap(NULL, this->_size, prot, flags, this->fd, 0);
+    this->_data = mmap(NULL, Sz, prot, flags, this->fd, 0);
 
     if (this->_data == MAP_FAILED) {
         std::string msg {
             "Shared memory: error mapping memory object " + this->_name +
-            " of size " + std::to_string(this->_size) + " bytes"
+            " of size " + std::to_string(Sz) + " bytes"
         };
 
         switch (errno) {
@@ -347,10 +343,8 @@ void _SharedMemory::map() {
                 msg.append(": locking error");
             break;
             case EINVAL:
-                if (this->_size > 0)
-                    msg.append(": too large");
-                else
-                    msg.append(": cannot map zero bytes");
+                // Size > 0 is asserted at compile-time
+                msg.append(": too large");
             break;
             case ENODEV:
                 msg.append(": filesystem does not support mamory mapping");
@@ -370,9 +364,10 @@ void _SharedMemory::map() {
     }
 }
 
-void _SharedMemory::unmap() {
+template<size_t Sz>
+void _SharedMemory<Sz>::unmap() {
     if (this->_data != nullptr && this->_data != MAP_FAILED) {
-        const auto err {munmap(this->_data, this->_size)};
+        const auto err {munmap(this->_data, Sz)};
 
         if (err == -1) {
             std::string msg {
@@ -397,85 +392,80 @@ void _SharedMemory::unmap() {
 
 // class Object
 
-template<class T>
-Object<T>::Object(const std::string& nm):
-_SharedMemory(nm, sizeof(T)) {}
+template<class Tp>
+Object<Tp>::Object(const std::string& nm):
+_SharedMemory<sizeof(Tp)>(nm) {}
 
-template<class T>
-Object<T>::operator T&() noexcept {
-    return *static_cast<T*>(this->_data);
+template<class Tp>
+Object<Tp>::operator Tp&() noexcept {
+    return *static_cast<Tp*>(this->_data);
 }
-template<class T>
-Object<T>::operator T&() const noexcept {
-    return *static_cast<T*>(this->_data);
+template<class Tp>
+Object<Tp>::operator Tp&() const noexcept {
+    return *static_cast<Tp*>(this->_data);
 }
 
-template<class T>
-T* Object<T>::operator->() noexcept {
+template<class Tp>
+Tp* Object<Tp>::operator->() noexcept {
     return this->_data;
 }
-template<class T>
-const T* Object<T>::operator->() const noexcept {
+template<class Tp>
+const Tp* Object<Tp>::operator->() const noexcept {
     return this->_data;
 }
 
-template<class T>
-T& Object<T>::get() noexcept {
-    return *static_cast<T*>(this->_data);
+template<class Tp>
+Tp& Object<Tp>::get() noexcept {
+    return *static_cast<Tp*>(this->_data);
 }
-template<class T>
-const T& Object<T>::get() const noexcept {
-    return *static_cast<T*>(this->_data);
+template<class Tp>
+const Tp& Object<Tp>::get() const noexcept {
+    return *static_cast<Tp*>(this->_data);
 }
 
-template<class T>
-T* Object<T>::data() noexcept {
-    return static_cast<T*>(this->_data);
+template<class Tp>
+Tp* Object<Tp>::data() noexcept {
+    return static_cast<Tp*>(this->_data);
 }
 
 
 // class Array
 
-template<class T>
-Array<T>::Array(const std::string& nm, size_t sz):
-_SharedMemory(nm, sz * sizeof(T)) {}
+template<class Tp, size_t Sz>
+Array<Tp, Sz>::Array(const std::string& nm):
+_SharedMemory<sizeof(Tp) * Sz>(nm) {}
 
-template<class T>
-T& Array<T>::operator[](size_t n) noexcept {
-    return this->_data[n];
+template<class Tp, size_t Sz>
+Tp& Array<Tp, Sz>::operator[](size_t n) noexcept {
+    return static_cast<Tp*>(this->_data)[n];
 }
-template<class T>
-const T& Array<T>::operator[](size_t n) const noexcept {
-    return this->_data[n];
+template<class Tp, size_t Sz>
+const Tp& Array<Tp, Sz>::operator[](size_t n) const noexcept {
+    return static_cast<Tp*>(this->_data)[n];
 }
 
-template<class T>
-T& Array<T>::at(size_t n) {
-    if (n >= this->_size)
+template<class Tp, size_t Sz>
+Tp& Array<Tp, Sz>::at(size_t n) {
+    if (n >= Sz)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
-            ", size = " + std::to_string(this->_size)
+            ", size = " + std::to_string(Sz)
         );
-    return this->_data[n];
+    return static_cast<Tp*>(this->_data)[n];
 }
-template<class T>
-const T& Array<T>::at(size_t n) const {
-    if (n >= this->_size)
+template<class Tp, size_t Sz>
+const Tp& Array<Tp, Sz>::at(size_t n) const {
+    if (n >= Sz)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
-            ", size = " + std::to_string(this->_size)
+            ", size = " + std::to_string(Sz)
         );
-    return this->_data[n];
+    return static_cast<Tp*>(this->_data)[n];
 }
 
-template<class T>
-size_t Array<T>::size() const noexcept {
-    return this->_num;
-}
-
-template<class T>
-T* Array<T>::data() noexcept {
-    return static_cast<T*>(this->_data);
+template<class Tp, size_t Sz>
+Tp* Array<Tp, Sz>::data() noexcept {
+    return static_cast<Tp*>(this->_data);
 }
 
 
