@@ -106,6 +106,8 @@ public:
     /** Object access. */
     operator T&() noexcept;
     operator T&() const noexcept;
+    T* operator->() noexcept;
+    const T* operator->() const noexcept;
     T& get() noexcept;
     const T& get() const noexcept;
 
@@ -406,6 +408,15 @@ Object<T>::operator T&() noexcept {
 template<class T>
 Object<T>::operator T&() const noexcept {
     return *static_cast<T*>(this->_data);
+}
+
+template<class T>
+T* Object<T>::operator->() noexcept {
+    return this->_data;
+}
+template<class T>
+const T* Object<T>::operator->() const noexcept {
+    return this->_data;
 }
 
 template<class T>
