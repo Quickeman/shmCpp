@@ -41,11 +41,11 @@ foreach(testSrc ${TEST_SRCS})
     endif()
     # Put test executables in their own directory
     set_target_properties(${testName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test/bin)
-endforeach(testSrc)
 
-# Add test to execution
-add_test(
-    NAME shmCpp_test
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/test/bin
-    COMMAND shmCpp_test_1
-)
+    # Add test to execution
+    add_test(
+        NAME ${testName}
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/test/bin
+        COMMAND ${testName}
+    )
+endforeach(testSrc)

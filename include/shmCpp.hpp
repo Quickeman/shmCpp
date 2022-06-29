@@ -407,11 +407,11 @@ Object<Tp>::operator Tp&() const noexcept {
 
 template<class Tp>
 Tp* Object<Tp>::operator->() noexcept {
-    return this->_data;
+    return static_cast<Tp*>(this->_data);
 }
 template<class Tp>
 const Tp* Object<Tp>::operator->() const noexcept {
-    return this->_data;
+    return static_cast<Tp*>(this->_data);
 }
 
 template<class Tp>

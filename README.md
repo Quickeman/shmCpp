@@ -18,7 +18,7 @@ or an array of objects of the same type.
 As this library is header-only, very little installation is required.
 Simply clone the repository to a sensible location in your project, and `#include` the header file `shmCpp.hpp`.
 
-When compiling, you will need to use `-I <shmCpp-root-dir>/include` so the compiler can find the header file.
+When compiling your project, you will need to use `-I <shmCpp-root-dir>/include` so the compiler can find the header file.
 You will also need to link the `librt` library. With GCC, this can be accomplished by adding `-lrt` to your compile command(s).
 
 ### CMake-based projects
