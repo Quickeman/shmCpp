@@ -111,6 +111,10 @@ public:
     Tp& get() noexcept;
     const Tp& get() const noexcept;
 
+    /** Object assignment. */
+    Object& operator=(const Tp& tobj);
+    Object& operator=(Tp&& tobj);
+
     /** Direct access to the mapped memory. */
     Tp* data() noexcept;
 };
@@ -421,6 +425,17 @@ Tp& Object<Tp>::get() noexcept {
 template<class Tp>
 const Tp& Object<Tp>::get() const noexcept {
     return *static_cast<Tp*>(this->_data);
+}
+
+template<class Tp>
+Object<Tp>& Object<Tp>::operator=(const Tp& o) {
+    *static_cast<Tp*>(this->_data) = o;
+    return *this;
+}
+template<class Tp>
+Object<Tp>& Object<Tp>::operator=(Tp&& o) {
+    *static_cast<Tp*>(this->_data) = o;
+    return *this;
 }
 
 template<class Tp>
