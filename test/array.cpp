@@ -2,8 +2,8 @@
 
 #include "shmCpp_test.hpp"
 
-#include <thread>
 #include <unistd.h>
+#include <sys/wait.h>
 
 int main() {
     const auto pid {fork()};
@@ -21,7 +21,7 @@ int main() {
 
         std::cout << "Data sent\n";
 
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        waitpid(pid, nullptr, 0);
 
     }
     else if (pid == 0) {

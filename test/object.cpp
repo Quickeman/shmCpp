@@ -3,7 +3,7 @@
 #include "shmCpp_test.hpp"
 
 #include <unistd.h>
-#include <thread>
+#include <sys/wait.h>
 
 void setObjZ(shmTest::obj_type& o) {
     o.z = shmTest::obj_value.z;
@@ -29,7 +29,7 @@ int main() {
 
         std::cout << "Data sent\n";
 
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        waitpid(pid, nullptr, 0);
 
     }
     else if (pid == 0) {
