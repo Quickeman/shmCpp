@@ -19,11 +19,13 @@ int main() {
     if (pid > 0) {
         // Parent (sender)
 
-        shm::Object<shmTest::obj_type> mem(shmTest::obj_name);
+        shm::Object<shmTest::obj_type, shm::Permission::ReadWrite> mem(shmTest::obj_name);
 
         std::cout << "Sender launched\n";
 
         mem = shmTest::obj_value;
+        mem->x = shmTest::obj_value.x;
+        mem.get().y = shmTest::obj_value.y;
         setObjZ(mem);
 
         std::cout << "Data sent\n";
@@ -36,7 +38,7 @@ int main() {
 
         std::cout << "Receiver launched\n";
 
-        shm::Object<shmTest::obj_type> mem(shmTest::obj_name);
+        shm::Object<shmTest::obj_type, shm::Permission::ReadOnly> mem(shmTest::obj_name);
 
         while (true) {
             if ((mem->x == shmTest::obj_value.x)

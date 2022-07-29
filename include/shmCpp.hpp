@@ -30,13 +30,8 @@ class MemoryError : public std::runtime_error {
 
 /** Enumeration of access permissions/modes for shared memory. */
 enum class Permission {
-    /** Give the object no permissions for the memory. */
-    None,
-    /** Give the object read permission only.
-     * @note read permission implies execute permission. */
-    Read,
-    /** Give the object write permission only. */
-    Write,
+    /** Give the object read permission only. */
+    ReadOnly,
     /** Give the object both read and write permissions. */
     ReadWrite
 };
