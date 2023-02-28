@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <sys/wait.h>
+#include <thread>
 
 int main() {
     const auto pid {fork()};
@@ -22,6 +23,10 @@ int main() {
         std::cout << "Data sent\n";
 
         waitpid(pid, nullptr, 0);
+
+        // Check data was not changed by read-only receiver
+        if (mem.at(1) != shmTest::arr_seq.at(1))
+            throw std::runtime_error("Array was changed by read-only mapping");
 
     }
     else if (pid == 0) {
@@ -45,6 +50,11 @@ int main() {
         for (auto i {0}; i < shmTest::arr_size; i++)
             std::cout << mem.at(i) << '\t';
         std::cout << std::endl;
+
+        // Test for read-only-ness
+        mem.at(1) = ~mem.at(1);
+        // Ensure enough time has passed for data carry-through
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     }
     else {

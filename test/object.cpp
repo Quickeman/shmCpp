@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <sys/wait.h>
+#include <thread>
 
 void setObjZ(shmTest::obj_type& o) {
     o.z = shmTest::obj_value.z;
@@ -32,6 +33,10 @@ int main() {
 
         waitpid(pid, nullptr, 0);
 
+        // Check data was not changed by read-only receiver
+        if (mem->x != shmTest::obj_value.x)
+            throw std::runtime_error("Object was changed by read-only mapping");
+
     }
     else if (pid == 0) {
         // Child (receiver)
@@ -53,6 +58,11 @@ int main() {
         std::cout << "x: " << mem->x << '\t';
         std::cout << "y: " << mem.get().y << '\t';
         std::cout << "z: " << std::boolalpha << getObjZ(mem) << '\n';
+
+        // Test for read-only-ness
+        mem->x = ~mem->x;
+        // Ensure enough time has passed for data carry-through
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     }
     else {
