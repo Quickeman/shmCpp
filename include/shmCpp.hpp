@@ -90,7 +90,7 @@ private:
 
 protected:
     /** Mapped data. */
-    void* _data;
+    volatile void* _data;
 
 private:
     /** Shared memory object's name. */
@@ -404,7 +404,7 @@ void _SharedMemory<Sz>::map() {
 template<size_t Sz>
 void _SharedMemory<Sz>::unmap() {
     if (this->_data != nullptr && this->_data != MAP_FAILED) {
-        const auto err {munmap(this->_data, Sz)};
+        const auto err {munmap(const_cast<void*>(this->_data), Sz)};
 
         if (err == -1) {
             std::string msg {
@@ -435,49 +435,49 @@ _SharedMemory<sizeof(Tp)>(nm, perm) {}
 
 template<class Tp>
 Object<Tp>::operator Tp&() noexcept {
-    return *static_cast<Tp*>(this->_data);
+    return *static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 template<class Tp>
 Object<Tp>::operator Tp&() const noexcept {
-    return *static_cast<Tp*>(this->_data);
+    return *static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 
 template<class Tp>
 Tp* Object<Tp>::operator->() noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 template<class Tp>
 const Tp* Object<Tp>::operator->() const noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 
 template<class Tp>
 Tp& Object<Tp>::get() noexcept {
-    return *static_cast<Tp*>(this->_data);
+    return *static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 template<class Tp>
 const Tp& Object<Tp>::get() const noexcept {
-    return *static_cast<Tp*>(this->_data);
+    return *static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 
 template<class Tp>
 Object<Tp>& Object<Tp>::operator=(const Tp& o) {
-    *static_cast<Tp*>(this->_data) = o;
+    *static_cast<Tp*>(const_cast<void*>(this->_data)) = o;
     return *this;
 }
 template<class Tp>
 Object<Tp>& Object<Tp>::operator=(Tp&& o) {
-    *static_cast<Tp*>(this->_data) = o;
+    *static_cast<Tp*>(const_cast<void*>(this->_data)) = o;
     return *this;
 }
 
 template<class Tp>
 Tp* Object<Tp>::data() noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 template<class Tp>
 const Tp* Object<Tp>::data() const noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 
 
@@ -489,11 +489,11 @@ _SharedMemory<sizeof(Tp) * Sz>(nm, perm) {}
 
 template<class Tp, size_t Sz>
 Tp& Array<Tp, Sz>::operator[](size_t n) noexcept {
-    return static_cast<Tp*>(this->_data)[n];
+    return static_cast<Tp*>(const_cast<void*>(this->_data))[n];
 }
 template<class Tp, size_t Sz>
 const Tp& Array<Tp, Sz>::operator[](size_t n) const noexcept {
-    return static_cast<Tp*>(this->_data)[n];
+    return static_cast<Tp*>(const_cast<void*>(this->_data))[n];
 }
 
 template<class Tp, size_t Sz>
@@ -503,7 +503,7 @@ Tp& Array<Tp, Sz>::at(size_t n) {
             "Shared memory: tried to access element " + std::to_string(n) +
             ", size = " + std::to_string(Sz)
         );
-    return static_cast<Tp*>(this->_data)[n];
+    return static_cast<Tp*>(const_cast<void*>(this->_data))[n];
 }
 template<class Tp, size_t Sz>
 const Tp& Array<Tp, Sz>::at(size_t n) const {
@@ -512,16 +512,16 @@ const Tp& Array<Tp, Sz>::at(size_t n) const {
             "Shared memory: tried to access element " + std::to_string(n) +
             ", size = " + std::to_string(Sz)
         );
-    return static_cast<Tp*>(this->_data)[n];
+    return static_cast<Tp*>(const_cast<void*>(this->_data))[n];
 }
 
 template<class Tp, size_t Sz>
 Tp* Array<Tp, Sz>::data() noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 template<class Tp, size_t Sz>
 const Tp* Array<Tp, Sz>::data() const noexcept {
-    return static_cast<Tp*>(this->_data);
+    return static_cast<Tp*>(const_cast<void*>(this->_data));
 }
 
 
