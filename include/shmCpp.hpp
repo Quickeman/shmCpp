@@ -11,6 +11,7 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <type_traits>
 
 /** Namespace encapsulating the shmCpp library. */
 namespace shm {
@@ -39,35 +40,31 @@ enum class Permission {
 
 /** Shared memory base class.
  * @param Sz The number of bytes to store in the shared memory. Must be
- * greater than zero. */
-template<size_t Sz, Permission Perm>
+ * greater than zero.
+ */
+template<size_t Sz>
 class _SharedMemory {
 public:
     // Assert size is acceptable is ok
-    static_assert(Sz > 0, "Cannot create shared memory object for type with size 0");
-
-    /** `true` if the object has read permission. */
-    static constexpr bool can_read {Perm == Permission::Read || Perm == Permission::ReadWrite};
-
-    /** `true` if the object has write permission. */
-    static constexpr bool can_write {Perm == Permission::Write || Perm == Permission::ReadWrite};
+    static_assert(Sz > 0, "Cannot create shared memory object with size 0");
 
     /** Constructor.
-     * Opens the SMO, creating it if it does not already exist, and resizes it
-     * to @a size.
+     * Opens the SMO, creating it if it does not already exist, and sizes it.
      * @param name The name/identifier of the POSIX shared memory object.
-     * @param size The number of bytes to store in the shared memory. Must be
-     * greater than zero.
+     * @param perm Permissions to give to the shared memory object.
      * @note It is advised to use @ref formatName on the name used.
      * @note If the SMO already exists and its size is larger than that
      * specified, the data past the end of the new length in the existing SMO
      * will be lost or corrupted. */
-    _SharedMemory(const std::string& name);
+    _SharedMemory(const std::string& name, Permission perm = Permission::ReadWrite);
 
     virtual ~_SharedMemory();
 
     /** @returns the name used to open the shared memory. */
     const std::string& name() const noexcept;
+
+    /** @return `true` if the shared memory object has write permission. */
+    bool is_writable() const noexcept;
 
     /** Checks if the memory is mapped. */
     bool empty() const noexcept;
@@ -99,22 +96,28 @@ private:
     /** Shared memory object's name. */
     const std::string _name;
 
+    /** Shared memory object's permission. */
+    Permission _perm;
+
     /** File descriptor for the SMO. */
     int fd;
 };
 
 
 /** Class for creating and manipulating a POSIX shared memory object (SMO). */
-template<class Tp, Permission Perm>
-class Object : public _SharedMemory<sizeof(Tp), Perm> {
+template<class Tp>
+class Object : public _SharedMemory<sizeof(Tp)> {
 public:
+    using base = _SharedMemory<sizeof(Tp)>;
+
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist.
      * @param name The name/identifier of the POSIX shared memory object.
+     * @param perm Permissions to give to the shared memory object.
      * @note It is advised to use @ref formatName on the name used.
      * @note If the SMO already exists and the types of this and the other
      * `shm::Object` are not the same size, the data may be corrupted. */
-    Object(const std::string& name);
+    Object(const std::string& name, Permission perm = Permission::ReadWrite);
 
     ~Object() = default;
 
@@ -132,22 +135,26 @@ public:
 
     /** Direct access to the mapped memory. */
     Tp* data() noexcept;
+    const Tp* data() const noexcept;
 };
 
 
 /** Class for creating and manipulating a POSIX shared memory object (SMO) array. */
-template<class Tp, size_t Sz, Permission Perm>
-class Array : public _SharedMemory<sizeof(Tp) * Sz, Perm> {
+template<class Tp, size_t Sz>
+class Array : public _SharedMemory<sizeof(Tp) * Sz> {
 public:
+    using base = _SharedMemory<sizeof(Tp) * Sz>;
+
     /** Constructor.
      * Opens the SMO, creating it if it does not already exist, and resizes it
      * to @a size.
      * @param name The name/identifier of the POSIX shared memory object.
+     * @param perm Permissions to give to the shared memory object.
      * @note It is advised to use @ref formatName on the name used.
      * @note If the SMO already exists and its size is larger than that
      * specified, the data past the end of the new length in the existing SMO
      * will be lost. */
-    Array(const std::string& name);
+    Array(const std::string& name, Permission perm = Permission::ReadWrite);
 
     ~Array() = default;
 
@@ -160,10 +167,11 @@ public:
     const Tp& at(size_t n) const;
 
     /** @returns @ref Sz; the number of @ref Tp objects in the Array. */
-    static constexpr size_t size() const noexcept { return Sz; }
+    static constexpr size_t size() noexcept { return Sz; }
 
     /** Direct access to the mapped memory. */
     Tp* data() noexcept;
+    const Tp* data() const noexcept;
 };
 
 /** Tests whether a SMO called @a name exists.
@@ -185,33 +193,38 @@ namespace shm {
 
 // class _SharedMemory
 
-template<size_t Sz, Permission Pm>
-_SharedMemory<Sz, Pm>::_SharedMemory(const std::string& nm):
-_data{nullptr}, _name{nm}, fd{-1}
+template<size_t Sz>
+_SharedMemory<Sz>::_SharedMemory(const std::string& nm, Permission perm):
+_data{nullptr}, _name{nm}, _perm{perm}, fd{-1}
 {
     this->open();
     this->map();
     this->close();
 }
 
-template<size_t Sz, Permission Pm>
-_SharedMemory<Sz, Pm>::~_SharedMemory() {
+template<size_t Sz>
+_SharedMemory<Sz>::~_SharedMemory() {
     this->unmap();
     this->unlink();
 }
 
-template<size_t Sz, Permission Pm>
-const std::string& _SharedMemory<Sz, Pm>::name() const noexcept {
+template<size_t Sz>
+const std::string& _SharedMemory<Sz>::name() const noexcept {
     return this->_name;
 }
 
-template<size_t Sz, Permission Pm>
-bool _SharedMemory<Sz, Pm>::empty() const noexcept {
+template<size_t Sz>
+bool _SharedMemory<Sz>::is_writable() const noexcept {
+    return this->_perm != Permission::ReadOnly;
+}
+
+template<size_t Sz>
+bool _SharedMemory<Sz>::empty() const noexcept {
     return this->_data != nullptr;
 }
 
-template<size_t Sz, Permission Pm>
-void _SharedMemory<Sz, Pm>::open() {
+template<size_t Sz>
+void _SharedMemory<Sz>::open() {
     const auto oflag {O_RDWR | O_CREAT};
     const mode_t mode {S_IRWXU | S_IRGRP};
 
@@ -275,8 +288,8 @@ void _SharedMemory<Sz, Pm>::open() {
     }
 }
 
-template<size_t Sz, Permission Pm>
-void _SharedMemory<Sz, Pm>::close() {
+template<size_t Sz>
+void _SharedMemory<Sz>::close() {
     if (this->fd != -1) {
         // Only close the file if it is open
         const auto err {::close(this->fd)};
@@ -308,8 +321,8 @@ void _SharedMemory<Sz, Pm>::close() {
     this->fd = -1;
 }
 
-template<size_t Sz, Permission Pm>
-void _SharedMemory<Sz, Pm>::unlink() {
+template<size_t Sz>
+void _SharedMemory<Sz>::unlink() {
     const auto err {shm_unlink(this->_name.c_str())};
 
     if (err == -1) {
@@ -340,10 +353,15 @@ void _SharedMemory<Sz, Pm>::unlink() {
     }
 }
 
-template<size_t Sz, Permission Pm>
-void _SharedMemory<Sz, Pm>::map() {
-    const auto prot {PROT_READ | PROT_WRITE | PROT_EXEC};
-    const auto flags {MAP_SHARED};
+template<size_t Sz>
+void _SharedMemory<Sz>::map() {
+    const auto prot {[this]{
+        int p {PROT_READ};
+        if (this->is_writable())
+            p |= PROT_WRITE;
+        return p;
+    }()};
+    const auto flags {this->is_writable() ? MAP_SHARED : MAP_PRIVATE};
 
     this->_data = mmap(NULL, Sz, prot, flags, this->fd, 0);
 
@@ -383,8 +401,8 @@ void _SharedMemory<Sz, Pm>::map() {
     }
 }
 
-template<size_t Sz, Permission Pm>
-void _SharedMemory<Sz, Pm>::unmap() {
+template<size_t Sz>
+void _SharedMemory<Sz>::unmap() {
     if (this->_data != nullptr && this->_data != MAP_FAILED) {
         const auto err {munmap(this->_data, Sz)};
 
@@ -411,71 +429,75 @@ void _SharedMemory<Sz, Pm>::unmap() {
 
 // class Object
 
-template<class Tp, Permission Pm>
-Object<Tp, Pm>::Object(const std::string& nm):
-_SharedMemory<sizeof(Tp), Pm>(nm) {}
+template<class Tp>
+Object<Tp>::Object(const std::string& nm, Permission perm):
+_SharedMemory<sizeof(Tp)>(nm, perm) {}
 
-template<class Tp, Permission Pm>
-Object<Tp, Pm>::operator Tp&() noexcept {
+template<class Tp>
+Object<Tp>::operator Tp&() noexcept {
     return *static_cast<Tp*>(this->_data);
 }
-template<class Tp, Permission Pm>
-Object<Tp, Pm>::operator Tp&() const noexcept {
+template<class Tp>
+Object<Tp>::operator Tp&() const noexcept {
     return *static_cast<Tp*>(this->_data);
 }
 
-template<class Tp, Permission Pm>
-Tp* Object<Tp, Pm>::operator->() noexcept {
+template<class Tp>
+Tp* Object<Tp>::operator->() noexcept {
     return static_cast<Tp*>(this->_data);
 }
-template<class Tp, Permission Pm>
-const Tp* Object<Tp, Pm>::operator->() const noexcept {
+template<class Tp>
+const Tp* Object<Tp>::operator->() const noexcept {
     return static_cast<Tp*>(this->_data);
 }
 
-template<class Tp, Permission Pm>
-Tp& Object<Tp, Pm>::get() noexcept {
+template<class Tp>
+Tp& Object<Tp>::get() noexcept {
     return *static_cast<Tp*>(this->_data);
 }
-template<class Tp, Permission Pm>
-const Tp& Object<Tp, Pm>::get() const noexcept {
+template<class Tp>
+const Tp& Object<Tp>::get() const noexcept {
     return *static_cast<Tp*>(this->_data);
 }
 
-template<class Tp, Permission Pm>
-Object<Tp, Pm>& Object<Tp, Pm>::operator=(const Tp& o) {
+template<class Tp>
+Object<Tp>& Object<Tp>::operator=(const Tp& o) {
     *static_cast<Tp*>(this->_data) = o;
     return *this;
 }
-template<class Tp, Permission Pm>
-Object<Tp, Pm>& Object<Tp, Pm>::operator=(Tp&& o) {
+template<class Tp>
+Object<Tp>& Object<Tp>::operator=(Tp&& o) {
     *static_cast<Tp*>(this->_data) = o;
     return *this;
 }
 
-template<class Tp, Permission Pm>
-Tp* Object<Tp, Pm>::data() noexcept {
+template<class Tp>
+Tp* Object<Tp>::data() noexcept {
+    return static_cast<Tp*>(this->_data);
+}
+template<class Tp>
+const Tp* Object<Tp>::data() const noexcept {
     return static_cast<Tp*>(this->_data);
 }
 
 
 // class Array
 
-template<class Tp, size_t Sz, Permission Pm>
-Array<Tp, Sz, Pm>::Array(const std::string& nm):
-_SharedMemory<sizeof(Tp) * Sz, Pm>(nm) {}
+template<class Tp, size_t Sz>
+Array<Tp, Sz>::Array(const std::string& nm, Permission perm):
+_SharedMemory<sizeof(Tp) * Sz>(nm, perm) {}
 
-template<class Tp, size_t Sz, Permission Pm>
-Tp& Array<Tp, Sz, Pm>::operator[](size_t n) noexcept {
+template<class Tp, size_t Sz>
+Tp& Array<Tp, Sz>::operator[](size_t n) noexcept {
     return static_cast<Tp*>(this->_data)[n];
 }
-template<class Tp, size_t Sz, Permission Pm>
-const Tp& Array<Tp, Sz, Pm>::operator[](size_t n) const noexcept {
+template<class Tp, size_t Sz>
+const Tp& Array<Tp, Sz>::operator[](size_t n) const noexcept {
     return static_cast<Tp*>(this->_data)[n];
 }
 
-template<class Tp, size_t Sz, Permission Pm>
-Tp& Array<Tp, Sz, Pm>::at(size_t n) {
+template<class Tp, size_t Sz>
+Tp& Array<Tp, Sz>::at(size_t n) {
     if (n >= Sz)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
@@ -483,8 +505,8 @@ Tp& Array<Tp, Sz, Pm>::at(size_t n) {
         );
     return static_cast<Tp*>(this->_data)[n];
 }
-template<class Tp, size_t Sz, Permission Pm>
-const Tp& Array<Tp, Sz, Pm>::at(size_t n) const {
+template<class Tp, size_t Sz>
+const Tp& Array<Tp, Sz>::at(size_t n) const {
     if (n >= Sz)
         throw std::out_of_range(
             "Shared memory: tried to access element " + std::to_string(n) +
@@ -493,8 +515,12 @@ const Tp& Array<Tp, Sz, Pm>::at(size_t n) const {
     return static_cast<Tp*>(this->_data)[n];
 }
 
-template<class Tp, size_t Sz, Permission Pm>
-Tp* Array<Tp, Sz, Pm>::data() noexcept {
+template<class Tp, size_t Sz>
+Tp* Array<Tp, Sz>::data() noexcept {
+    return static_cast<Tp*>(this->_data);
+}
+template<class Tp, size_t Sz>
+const Tp* Array<Tp, Sz>::data() const noexcept {
     return static_cast<Tp*>(this->_data);
 }
 

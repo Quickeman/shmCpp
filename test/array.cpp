@@ -11,7 +11,7 @@ int main() {
     if (pid > 0) {
         // Parent (sender)
 
-        shm::Array<shmTest::arr_type, shmTest::arr_size, shm::Permission::ReadWrite> mem(shmTest::arr_name);
+        shm::Array<shmTest::arr_type, shmTest::arr_size> mem(shmTest::arr_name);
 
         std::cout << "Sender launched\n";
 
@@ -29,7 +29,7 @@ int main() {
 
         std::cout << "Receiver launched\n";
 
-        shm::Array<shmTest::arr_type, shmTest::arr_size, shm::Permission::ReadOnly> mem(shmTest::arr_name);
+        shm::Array<shmTest::arr_type, shmTest::arr_size> mem(shmTest::arr_name, shm::Permission::ReadOnly);
 
         while (true) {
             shmTest::arr_type sum {0};
