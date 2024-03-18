@@ -43,7 +43,7 @@ int main() {
 
         std::cout << "Receiver launched\n";
 
-        shm::Object<shmTest::obj_type> mem(shmTest::obj_name, shm::Permission::ReadOnly);
+        shm::Object<shmTest::obj_type> mem(shmTest::obj_name, shm::Permissions::ReadOnly);
 
         while (true) {
             if ((mem->x == shmTest::obj_value.x)

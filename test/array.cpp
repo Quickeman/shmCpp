@@ -34,7 +34,7 @@ int main() {
 
         std::cout << "Receiver launched\n";
 
-        shm::Array<shmTest::arr_type, shmTest::arr_size> mem(shmTest::arr_name, shm::Permission::ReadOnly);
+        shm::Array<shmTest::arr_type, shmTest::arr_size> mem(shmTest::arr_name, shm::Permissions::ReadOnly);
 
         while (true) {
             shmTest::arr_type sum {0};
@@ -47,8 +47,8 @@ int main() {
         };
 
         std::cout << "Data received:\n";
-        for (auto i {0}; i < shmTest::arr_size; i++)
-            std::cout << mem.at(i) << '\t';
+        for (const auto& el : mem)
+            std::cout << el << '\t';
         std::cout << std::endl;
 
         // Test for read-only-ness
