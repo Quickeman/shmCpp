@@ -131,7 +131,7 @@ public:
     /** Object access. */
     inline operator Tp&() noexcept
         { return *this->get_typed(); }
-    inline operator Tp&() const noexcept
+    inline operator const Tp&() const noexcept
         { return *this->get_typed(); }
     inline Tp* operator->() noexcept
         { return this->get_typed(); }
