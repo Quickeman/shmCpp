@@ -208,7 +208,7 @@ public:
     }
 
     /** @returns @ref Sz; the number of @ref Tp objects in the Array. */
-    constexpr size_t size() noexcept
+    constexpr size_t size() const noexcept
         { return Sz; }
 
     /** Direct access to the mapped memory. */
